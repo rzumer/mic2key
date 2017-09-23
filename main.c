@@ -6,53 +6,14 @@
 #define MAX(a,b) ((a) > (b) ? a : b)
 
 // Process bytes and return the peak amplitude normalized on a scale of 100.
-int GetAmplitude(WAVEFORMATEX *format, BYTE *data, UINT32 *numFrames)
+int GetAmplitude(WAVEFORMATEXTENSIBLE *format, BYTE *data, UINT32 *numFrames)
 {
-	static const GUID KSDATAFORMAT_SUBTYPE_PCM = { 0x00000001, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xAA, 0x00, 0x38, 0x9B, 0x71 };
-
-	/*printf("%u\n", format->nBlockAlign);
-	printf("%u\n", *numFrames);
-	printf("%u\n", format->wBitsPerSample);
-	printf("%u\n", format->nChannels);
-	printf("%u\n", format->cbSize);*/
-	
-	switch (format->wFormatTag)
-	{
-	case WAVE_FORMAT_PCM:
-		printf("Unsupported input format.\n");
-		return -1;
-	case WAVE_FORMAT_EXTENSIBLE:
-		break;
-	case WAVE_FORMAT_MPEG:
-		printf("Unsupported input format.\n");
-		return -1;
-	case WAVE_FORMAT_MPEGLAYER3:
-		printf("Unsupported input format.\n");
-		return -1;
-	default:
-		printf("Unrecognized input format.\n");
-		break;
-	}
-	
-	GUID subFormat = ((WAVEFORMATEXTENSIBLE*)&format)->SubFormat;
-	if (!memcmp(&subFormat, &KSDATAFORMAT_SUBTYPE_PCM, sizeof(GUID)))
-	{
-		printf("Unsupported input format.\n");
-		return -1;
-	}
-
-	if (format->nBlockAlign != 4 || format->wBitsPerSample != 32)
-	{
-		printf("Unsupported input format.\n");
-		return -1;
-	}
-
 	//long int sum = 0;
 	float peak = 0;
 	for (int frame = 0; frame < *numFrames; frame++)
 	{
 		if ((float*)data == '\0') return 0;
-		float amplitude = fabs(*((float *)(data + (frame * format->nBlockAlign))));
+		float amplitude = fabs(*((float *)(data + (frame * format->Format.nBlockAlign))));
 
 		peak = MAX(peak, amplitude);
 		//sum += roundf(amplitude * 100.0f);
@@ -90,6 +51,7 @@ static const GUID CLSID_MMDeviceEnumerator = { 0xBCDE0395, 0xE52F, 0x467C, 0x8E,
 static const GUID IID_IMMDeviceEnumerator = { 0xA95664D2, 0x9614, 0x4F35, 0xA7, 0x46, 0xDE, 0x8D, 0xB6, 0x36, 0x17, 0xE6 };
 static const GUID IID_IAudioClient = { 0x1CB9AD4C, 0xDBFA, 0x4C32, 0xB1, 0x78, 0xC2, 0xF5, 0x68, 0xA7, 0x03, 0xB2 };
 static const GUID IID_IAudioCaptureClient = { 0xC8ADBD64, 0xE71E, 0x48A0, 0xA4, 0xDE, 0x18, 0x5C, 0x39, 0x5C, 0xD3, 0x17 };
+static const GUID KSDATAFORMAT_SUBTYPE_PCM = { 0x00000001, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xAA, 0x00, 0x38, 0x9B, 0x71 };
 
 HRESULT RecordAudioStream(int timeUnit, int threshold, WORD keyCode)
 {
@@ -143,6 +105,43 @@ HRESULT RecordAudioStream(int timeUnit, int threshold, WORD keyCode)
 	hr = pAudioClient->lpVtbl->Initialize(pAudioClient, AUDCLNT_SHAREMODE_SHARED, 0, hnsRequestedDuration, 0, pwfx, NULL);
 	EXIT_ON_ERROR(hr)
 
+	/*printf("%u\n", format->nBlockAlign);
+	printf("%u\n", *numFrames);
+	printf("%u\n", format->wBitsPerSample);
+	printf("%u\n", format->nChannels);
+	printf("%u\n", format->cbSize);*/
+
+	switch (pwfx->wFormatTag)
+	{
+	case WAVE_FORMAT_PCM:
+		printf("Unsupported input format.\n");
+		goto Exit;
+	case WAVE_FORMAT_EXTENSIBLE:
+		break;
+	case WAVE_FORMAT_MPEG:
+		printf("Unsupported input format.\n");
+		goto Exit;
+	case WAVE_FORMAT_MPEGLAYER3:
+		printf("Unsupported input format.\n");
+		goto Exit;
+	default:
+		printf("Unrecognized input format.\n");
+		goto Exit;
+	}
+
+	GUID subFormat = ((WAVEFORMATEXTENSIBLE*)&pwfx)->SubFormat;
+	if (!memcmp(&subFormat, &KSDATAFORMAT_SUBTYPE_PCM, sizeof(GUID)))
+	{
+		printf("Unsupported input format.\n");
+		goto Exit;
+	}
+
+	if (pwfx->wBitsPerSample != 32)
+	{
+		printf("Unsupported input bit depth.\n");
+		goto Exit;
+	}
+
 	// Get the size of the allocated buffer.
 	hr = pAudioClient->lpVtbl->GetBufferSize(pAudioClient, &bufferFrameCount);
 	EXIT_ON_ERROR(hr)
@@ -155,6 +154,8 @@ HRESULT RecordAudioStream(int timeUnit, int threshold, WORD keyCode)
 
 	hr = pAudioClient->lpVtbl->Start(pAudioClient);  // Start recording.
 	EXIT_ON_ERROR(hr)
+
+	printf("Now recording. Press Ctrl+C to terminate.\n");
 
 	// Each loop fills about half of the shared buffer.
 	while (bDone == FALSE)
