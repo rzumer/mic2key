@@ -5,27 +5,47 @@
 // Process bytes and return the peak amplitude normalized on a scale of 100.
 int GetAmplitude(WAVEFORMATEX *format, BYTE *data, UINT32 *numFrames)
 {
-	/*printf("%u\n", *numFrames);
-	printf("%u\n", sizeof(*data));
+	static const GUID KSDATAFORMAT_SUBTYPE_PCM = { 0x00000001, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xAA, 0x00, 0x38, 0x9B, 0x71 };
+
+	//printf("%u\n", format->nBlockAlign);
+	//printf("%u\n", *numFrames);
+	/*printf("%u\n", sizeof(*data));
 	printf("%u\n", format->wBitsPerSample);
 	printf("%u\n", format->nChannels);
 	printf("%u\n", format->cbSize);*/
-	/*
+	
 	switch (format->wFormatTag)
 	{
 	case WAVE_FORMAT_PCM:
-		printf("pcm");
-		break;
+		printf("Unsupported input format.\n");
+		return -1;
 	case WAVE_FORMAT_EXTENSIBLE:
-		printf("extensible");
 		break;
 	case WAVE_FORMAT_MPEG:
-		printf("mpeg");
-		break;
+		printf("Unsupported input format.\n");
+		return -1;
 	case WAVE_FORMAT_MPEGLAYER3:
-		printf("mp3");
+		printf("Unsupported input format.\n");
+		return -1;
+	default:
+		printf("Unrecognized input format.\n");
 		break;
-	}*/
+	}
+	
+	GUID subFormat = ((WAVEFORMATEXTENSIBLE*)&format)->SubFormat;
+	if (!memcmp(&subFormat, &KSDATAFORMAT_SUBTYPE_PCM, sizeof(GUID)))
+	{
+		printf("Unsupported input format.\n");
+		return -1;
+	}
+
+	/*int sum = 0;
+	for (int frame = 0; frame < *numFrames; frame++)
+	{
+		BYTE curByte = *((unsigned char *)data + frame * format->nBlockAlign);
+	}
+
+	printf("%u\n", sum);*/
 
 	return 0;
 }
@@ -63,12 +83,12 @@ HRESULT RecordAudioStream(int timeUnit, int threshold, WORD keyCode)
 {
 	if (timeUnit <= 0 || timeUnit > MAX_BUFFER_LENGTH)
 	{
-		printf("Recorded time unit is out of permitted range.");
+		printf("Recorded time unit is out of permitted range.\n");
 		return E_INVALIDARG;
 	}
 	if (threshold < MIN_THRESHOLD_VALUE || threshold > MAX_THRESHOLD_VALUE)
 	{
-		printf("Threshold is out of range.");
+		printf("Threshold is out of range.\n");
 		return E_INVALIDARG;
 	}
 
@@ -147,11 +167,13 @@ HRESULT RecordAudioStream(int timeUnit, int threshold, WORD keyCode)
 				pData = 0;
 			}
 
-			// Concatenate bytes
+			// Calculate the amplitude for the current buffer
 			//if (pData == NULL) printf("Null data");
 			//else printf("%02x\n", pData);
 
 			int amplitude = GetAmplitude(pwfx, pData, &numFramesAvailable);
+			if (amplitude == -1) goto Exit;
+
 			peak = MAX(peak, amplitude);
 
 			hr = pCaptureClient->lpVtbl->ReleaseBuffer(pCaptureClient, numFramesAvailable);
@@ -192,7 +214,7 @@ Exit:
 }
 
 int main() {
-	RecordAudioStream(100, 50, VK_SPACE);
+	RecordAudioStream(2000, 50, VK_SPACE);
 	getchar();
 	return 0;
 }
