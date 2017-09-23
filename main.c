@@ -1,15 +1,17 @@
 #include <stdio.h>
 #include <Mmdeviceapi.h>
 #include <audioclient.h>
+#include <math.h>
+
+#define MAX(a,b) ((a) > (b) ? a : b)
 
 // Process bytes and return the peak amplitude normalized on a scale of 100.
 int GetAmplitude(WAVEFORMATEX *format, BYTE *data, UINT32 *numFrames)
 {
 	static const GUID KSDATAFORMAT_SUBTYPE_PCM = { 0x00000001, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xAA, 0x00, 0x38, 0x9B, 0x71 };
 
-	//printf("%u\n", format->nBlockAlign);
-	//printf("%u\n", *numFrames);
-	/*printf("%u\n", sizeof(*data));
+	/*printf("%u\n", format->nBlockAlign);
+	printf("%u\n", *numFrames);
 	printf("%u\n", format->wBitsPerSample);
 	printf("%u\n", format->nChannels);
 	printf("%u\n", format->cbSize);*/
@@ -39,15 +41,27 @@ int GetAmplitude(WAVEFORMATEX *format, BYTE *data, UINT32 *numFrames)
 		return -1;
 	}
 
-	/*int sum = 0;
-	for (int frame = 0; frame < *numFrames; frame++)
+	if (format->nBlockAlign != 4 || format->wBitsPerSample != 32)
 	{
-		BYTE curByte = *((unsigned char *)data + frame * format->nBlockAlign);
+		printf("Unsupported input format.\n");
+		return -1;
 	}
 
-	printf("%u\n", sum);*/
+	//long int sum = 0;
+	float peak = 0;
+	for (int frame = 0; frame < *numFrames; frame++)
+	{
+		if ((float*)data == '\0') return 0;
+		float amplitude = fabs(*((float *)(data + (frame * format->nBlockAlign))));
 
-	return 0;
+		peak = MAX(peak, amplitude);
+		//sum += roundf(amplitude * 100.0f);
+	}
+
+	//printf("mean: %i\n", (int)round(sum / (double)*numFrames));
+	//printf("peak: %i\n", (int)roundf(peak * 100.0));
+
+	return (int)roundf(peak * 100.0);
 }
 
 // Record an audio stream from the default audio capture
@@ -66,8 +80,6 @@ int GetAmplitude(WAVEFORMATEX *format, BYTE *data, UINT32 *numFrames)
 // Minimm and maximum values for the threshold parameter
 #define MIN_THRESHOLD_VALUE 0
 #define MAX_THRESHOLD_VALUE 100
-
-#define MAX(a,b) ((a) > (b) ? a : b)
 
 #define EXIT_ON_ERROR(hres) \
 if (FAILED(hres)) { goto Exit; }
@@ -185,19 +197,19 @@ HRESULT RecordAudioStream(int timeUnit, int threshold, WORD keyCode)
 
 		if (peak >= threshold)
 		{
-			printf("Y\n");
+			//printf("Y\n");
 			input.ki.dwFlags = 0;
 		}
 		else
 		{
-			printf("N\n");
+			//printf("N\n");
 			input.ki.dwFlags = KEYEVENTF_KEYUP;
 		}
 
 		// Send input (key down or up depending on peak value).
 		SendInput(1, &input, sizeof(INPUT));
 
-		bDone = TRUE;
+		//bDone = TRUE;
 	}
 
 	hr = pAudioClient->lpVtbl->Stop(pAudioClient);  // Stop recording.
@@ -214,7 +226,7 @@ Exit:
 }
 
 int main() {
-	RecordAudioStream(2000, 50, VK_SPACE);
+	RecordAudioStream(50, 50, 0x59/*VK_SPACE*/);
 	getchar();
 	return 0;
 }
