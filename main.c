@@ -226,8 +226,52 @@ Exit:
 	return hr;
 }
 
-int main() {
-	RecordAudioStream(50, 50, 0x59/*VK_SPACE*/);
+int main(int argc, char *argv[]) {
+	int interval = 50;
+	int threshold = 50;
+	WORD keyCode = VK_SPACE;
+
+	if (argc > 1)
+	{
+		char *p;
+
+		long conv = strtol(argv[1], &p, 10);
+
+		if (*p != '\0' || conv > INT_MAX)
+		{
+			printf("Invalid argument.\n");
+			getchar();
+			return 1;
+		}
+
+		interval = conv;
+	}
+
+	if (argc > 2)
+	{
+		char *p;
+
+		long conv = strtol(argv[2], &p, 10);
+
+		if (*p != '\0' || conv > INT_MAX)
+		{
+			printf("Invalid argument.\n");
+			getchar();
+			return 1;
+		}
+
+		threshold = conv;
+	}
+
+	printf("Enter the key to bind to the microphone. ");
+	char key = getchar();
+	printf("\n");
+
+	HKL keyboardLayout = GetKeyboardLayout(0);
+	SHORT keyCodeShort = VkKeyScanEx(key, keyboardLayout);
+	keyCode = keyCodeShort & 0xff;
+
+	RecordAudioStream(interval, threshold, keyCode);
 	getchar();
 	return 0;
 }
