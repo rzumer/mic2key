@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <Mmdeviceapi.h>
 #include <audioclient.h>
-#include "main.h"
 
 // Record an audio stream from the default audio capture
 // device. Poll the peak intensity every 1/10 second and
