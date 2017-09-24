@@ -105,24 +105,24 @@ HRESULT RecordAudioStream(int timeUnit, int threshold, WORD keyCode)
 	hr = pAudioClient->lpVtbl->Initialize(pAudioClient, AUDCLNT_SHAREMODE_SHARED, 0, hnsRequestedDuration, 0, pwfx, NULL);
 	EXIT_ON_ERROR(hr)
 
-	/*printf("%u\n", format->nBlockAlign);
-	printf("%u\n", *numFrames);
-	printf("%u\n", format->wBitsPerSample);
-	printf("%u\n", format->nChannels);
-	printf("%u\n", format->cbSize);*/
+#ifdef _DEBUG
+	printf("Bits per sample: %u\n", pwfx->wBitsPerSample);
+	printf("Channels: %u\n", pwfx->nChannels);
+	printf("Block Size: %u\n", pwfx->nBlockAlign);
+#endif
 
 	switch (pwfx->wFormatTag)
 	{
 	case WAVE_FORMAT_PCM:
-		printf("Unsupported input format.\n");
+		printf("Unsupported input format (non-extensible PCM).\n");
 		goto Exit;
 	case WAVE_FORMAT_EXTENSIBLE:
 		break;
 	case WAVE_FORMAT_MPEG:
-		printf("Unsupported input format.\n");
+		printf("Unsupported input format (MPEG).\n");
 		goto Exit;
 	case WAVE_FORMAT_MPEGLAYER3:
-		printf("Unsupported input format.\n");
+		printf("Unsupported input format (MP3).\n");
 		goto Exit;
 	default:
 		printf("Unrecognized input format.\n");
@@ -132,7 +132,7 @@ HRESULT RecordAudioStream(int timeUnit, int threshold, WORD keyCode)
 	GUID subFormat = ((WAVEFORMATEXTENSIBLE*)&pwfx)->SubFormat;
 	if (!memcmp(&subFormat, &KSDATAFORMAT_SUBTYPE_PCM, sizeof(GUID)))
 	{
-		printf("Unsupported input format.\n");
+		printf("Unsupported input format (non-PCM WAV).\n");
 		goto Exit;
 	}
 
@@ -272,6 +272,5 @@ int main(int argc, char *argv[]) {
 	keyCode = keyCodeShort & 0xff;
 
 	RecordAudioStream(interval, threshold, keyCode);
-	getchar();
 	return 0;
 }
