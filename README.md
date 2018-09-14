@@ -8,5 +8,3 @@ Only 32-bit float audio input is currently supported. Only the first channel is 
 Usage: `mic2key <interval> <threshold>`
 
 Project files are generated with Visual Studio 2017.
-
-A short video demo is available [here](https://ns326742.ip-37-187-108.eu/mic2key.webm).
