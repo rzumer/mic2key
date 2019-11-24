@@ -8,21 +8,21 @@
 // Process bytes and return the peak amplitude normalized on a scale of 100.
 int GetAmplitude(WAVEFORMATEXTENSIBLE *format, BYTE *data, UINT32 *numFrames)
 {
-	//long int sum = 0;
-	float peak = 0;
-	for (int frame = 0; frame < *numFrames; frame++)
-	{
-		if ((float*)data == '\0') return 0;
-		float amplitude = fabs(*((float *)(data + (frame * format->Format.nBlockAlign))));
+    //long int sum = 0;
+    float peak = 0;
+    for (int frame = 0; frame < *numFrames; frame++)
+    {
+        if ((float*)data == '\0') return 0;
+        float amplitude = fabs(*((float *)(data + (frame * format->Format.nBlockAlign))));
 
-		peak = MAX(peak, amplitude);
-		//sum += roundf(amplitude * 100.0f);
-	}
+        peak = MAX(peak, amplitude);
+        //sum += roundf(amplitude * 100.0f);
+    }
 
-	//printf("mean: %i\n", (int)round(sum / (double)*numFrames));
-	//printf("peak: %i\n", (int)roundf(peak * 100.0));
+    //printf("mean: %i\n", (int)round(sum / (double)*numFrames));
+    //printf("peak: %i\n", (int)roundf(peak * 100.0));
 
-	return (int)roundf(peak * 100.0);
+    return (int)roundf(peak * 100.0);
 }
 
 // Record an audio stream from the default audio capture
@@ -55,229 +55,229 @@ static const GUID KSDATAFORMAT_SUBTYPE_PCM = { 0x00000001, 0x0000, 0x0010, 0x80,
 
 HRESULT RecordAudioStream(int timeUnit, int threshold, WORD keyCode)
 {
-	if (timeUnit <= 0 || timeUnit > MAX_BUFFER_LENGTH)
-	{
-		printf("Recorded time unit is out of permitted range.\n");
-		return E_INVALIDARG;
-	}
-	if (threshold < MIN_THRESHOLD_VALUE || threshold > MAX_THRESHOLD_VALUE)
-	{
-		printf("Threshold is out of range.\n");
-		return E_INVALIDARG;
-	}
+    if (timeUnit <= 0 || timeUnit > MAX_BUFFER_LENGTH)
+    {
+        printf("Recorded time unit is out of permitted range.\n");
+        return E_INVALIDARG;
+    }
+    if (threshold < MIN_THRESHOLD_VALUE || threshold > MAX_THRESHOLD_VALUE)
+    {
+        printf("Threshold is out of range.\n");
+        return E_INVALIDARG;
+    }
 
-	HRESULT hr;
-	REFERENCE_TIME hnsRequestedDuration = REFTIMES_PER_MILLISEC * timeUnit;
-	REFERENCE_TIME hnsActualDuration;
-	UINT32 bufferFrameCount;
-	UINT32 numFramesAvailable;
-	IMMDeviceEnumerator *pEnumerator = NULL;
-	IMMDevice *pDevice = NULL;
-	IAudioClient *pAudioClient = NULL;
-	IAudioCaptureClient *pCaptureClient = NULL;
-	WAVEFORMATEX *pwfx = NULL;
-	UINT32 packetLength = 0;
-	BOOL bDone = FALSE;
-	BYTE *pData;
-	DWORD flags;
-	int peak = 0;
-	INPUT input = { .type = INPUT_KEYBOARD,
-		.ki.wScan = MapVirtualKey(keyCode, MAPVK_VK_TO_VSC),
-		.ki.time = 0,
-		.ki.dwExtraInfo = 0,
-		.ki.wVk = keyCode,
-		.ki.dwFlags = 0 };
+    HRESULT hr;
+    REFERENCE_TIME hnsRequestedDuration = REFTIMES_PER_MILLISEC * timeUnit;
+    REFERENCE_TIME hnsActualDuration;
+    UINT32 bufferFrameCount;
+    UINT32 numFramesAvailable;
+    IMMDeviceEnumerator *pEnumerator = NULL;
+    IMMDevice *pDevice = NULL;
+    IAudioClient *pAudioClient = NULL;
+    IAudioCaptureClient *pCaptureClient = NULL;
+    WAVEFORMATEX *pwfx = NULL;
+    UINT32 packetLength = 0;
+    BOOL bDone = FALSE;
+    BYTE *pData;
+    DWORD flags;
+    int peak = 0;
+    INPUT input = { .type = INPUT_KEYBOARD,
+        .ki.wScan = MapVirtualKey(keyCode, MAPVK_VK_TO_VSC),
+        .ki.time = 0,
+        .ki.dwExtraInfo = 0,
+        .ki.wVk = keyCode,
+        .ki.dwFlags = 0 };
 
-	CoInitialize(0);
+    CoInitialize(0);
 
-	hr = CoCreateInstance(&CLSID_MMDeviceEnumerator, NULL, CLSCTX_ALL, &IID_IMMDeviceEnumerator, (void**) &pEnumerator);
-	EXIT_ON_ERROR(hr)
+    hr = CoCreateInstance(&CLSID_MMDeviceEnumerator, NULL, CLSCTX_ALL, &IID_IMMDeviceEnumerator, (void**) &pEnumerator);
+    EXIT_ON_ERROR(hr)
 
-	hr = pEnumerator->lpVtbl->GetDefaultAudioEndpoint(pEnumerator, eCapture, eCommunications, &pDevice);
-	EXIT_ON_ERROR(hr)
+    hr = pEnumerator->lpVtbl->GetDefaultAudioEndpoint(pEnumerator, eCapture, eCommunications, &pDevice);
+    EXIT_ON_ERROR(hr)
 
-	hr = pDevice->lpVtbl->Activate(pDevice, &IID_IAudioClient, CLSCTX_ALL, NULL, (void**)&pAudioClient);
-	EXIT_ON_ERROR(hr)
+    hr = pDevice->lpVtbl->Activate(pDevice, &IID_IAudioClient, CLSCTX_ALL, NULL, (void**)&pAudioClient);
+    EXIT_ON_ERROR(hr)
 
-	hr = pAudioClient->lpVtbl->GetMixFormat(pAudioClient, &pwfx);
-	EXIT_ON_ERROR(hr)
+    hr = pAudioClient->lpVtbl->GetMixFormat(pAudioClient, &pwfx);
+    EXIT_ON_ERROR(hr)
 
-	hr = pAudioClient->lpVtbl->Initialize(pAudioClient, AUDCLNT_SHAREMODE_SHARED, 0, hnsRequestedDuration, 0, pwfx, NULL);
-	EXIT_ON_ERROR(hr)
+    hr = pAudioClient->lpVtbl->Initialize(pAudioClient, AUDCLNT_SHAREMODE_SHARED, 0, hnsRequestedDuration, 0, pwfx, NULL);
+    EXIT_ON_ERROR(hr)
 
 #ifdef _DEBUG
-	printf("Bits per sample: %u\n", pwfx->wBitsPerSample);
-	printf("Channels: %u\n", pwfx->nChannels);
-	printf("Block Size: %u\n", pwfx->nBlockAlign);
+    printf("Bits per sample: %u\n", pwfx->wBitsPerSample);
+    printf("Channels: %u\n", pwfx->nChannels);
+    printf("Block Size: %u\n", pwfx->nBlockAlign);
 #endif
 
-	switch (pwfx->wFormatTag)
-	{
-	case WAVE_FORMAT_PCM:
-		printf("Unsupported input format (non-extensible PCM).\n");
-		goto Exit;
-	case WAVE_FORMAT_EXTENSIBLE:
-		break;
-	case WAVE_FORMAT_MPEG:
-		printf("Unsupported input format (MPEG).\n");
-		goto Exit;
-	case WAVE_FORMAT_MPEGLAYER3:
-		printf("Unsupported input format (MP3).\n");
-		goto Exit;
-	default:
-		printf("Unrecognized input format.\n");
-		goto Exit;
-	}
+    switch (pwfx->wFormatTag)
+    {
+    case WAVE_FORMAT_PCM:
+        printf("Unsupported input format (non-extensible PCM).\n");
+        goto Exit;
+    case WAVE_FORMAT_EXTENSIBLE:
+        break;
+    case WAVE_FORMAT_MPEG:
+        printf("Unsupported input format (MPEG).\n");
+        goto Exit;
+    case WAVE_FORMAT_MPEGLAYER3:
+        printf("Unsupported input format (MP3).\n");
+        goto Exit;
+    default:
+        printf("Unrecognized input format.\n");
+        goto Exit;
+    }
 
-	GUID subFormat = ((WAVEFORMATEXTENSIBLE*)&pwfx)->SubFormat;
-	if (!memcmp(&subFormat, &KSDATAFORMAT_SUBTYPE_PCM, sizeof(GUID)))
-	{
-		printf("Unsupported input format (non-PCM WAV).\n");
-		goto Exit;
-	}
+    GUID subFormat = ((WAVEFORMATEXTENSIBLE*)&pwfx)->SubFormat;
+    if (!memcmp(&subFormat, &KSDATAFORMAT_SUBTYPE_PCM, sizeof(GUID)))
+    {
+        printf("Unsupported input format (non-PCM WAV).\n");
+        goto Exit;
+    }
 
-	if (pwfx->wBitsPerSample != 32)
-	{
-		printf("Unsupported input bit depth.\n");
-		goto Exit;
-	}
+    if (pwfx->wBitsPerSample != 32)
+    {
+        printf("Unsupported input bit depth.\n");
+        goto Exit;
+    }
 
-	// Get the size of the allocated buffer.
-	hr = pAudioClient->lpVtbl->GetBufferSize(pAudioClient, &bufferFrameCount);
-	EXIT_ON_ERROR(hr)
+    // Get the size of the allocated buffer.
+    hr = pAudioClient->lpVtbl->GetBufferSize(pAudioClient, &bufferFrameCount);
+    EXIT_ON_ERROR(hr)
 
-	hr = pAudioClient->lpVtbl->GetService(pAudioClient, &IID_IAudioCaptureClient, (void**)&pCaptureClient);
-	EXIT_ON_ERROR(hr)
+    hr = pAudioClient->lpVtbl->GetService(pAudioClient, &IID_IAudioCaptureClient, (void**)&pCaptureClient);
+    EXIT_ON_ERROR(hr)
 
-	// Calculate the actual duration of the allocated buffer.
-	hnsActualDuration = (double)REFTIMES_PER_SEC * bufferFrameCount / pwfx->nSamplesPerSec;
+    // Calculate the actual duration of the allocated buffer.
+    hnsActualDuration = (double)REFTIMES_PER_SEC * bufferFrameCount / pwfx->nSamplesPerSec;
 
-	hr = pAudioClient->lpVtbl->Start(pAudioClient);  // Start recording.
-	EXIT_ON_ERROR(hr)
+    hr = pAudioClient->lpVtbl->Start(pAudioClient);  // Start recording.
+    EXIT_ON_ERROR(hr)
 
-	printf("Now recording. Press Ctrl+C to terminate.\n");
+    printf("Now recording. Press Ctrl+C to terminate.\n");
 
-	// Each loop fills about half of the shared buffer.
-	while (bDone == FALSE)
-	{
-		// Sleep for half the buffer duration.
-		Sleep(hnsActualDuration / REFTIMES_PER_MILLISEC / 2);
+    // Each loop fills about half of the shared buffer.
+    while (bDone == FALSE)
+    {
+        // Sleep for half the buffer duration.
+        Sleep(hnsActualDuration / REFTIMES_PER_MILLISEC / 2);
 
-		hr = pCaptureClient->lpVtbl->GetNextPacketSize(pCaptureClient, &packetLength);
-		EXIT_ON_ERROR(hr)
+        hr = pCaptureClient->lpVtbl->GetNextPacketSize(pCaptureClient, &packetLength);
+        EXIT_ON_ERROR(hr)
 
-		// Reset the peak value.
-		peak = 0;
+        // Reset the peak value.
+        peak = 0;
 
-		while (packetLength != 0)
-		{
-			// Get the available data in the shared buffer.
-			hr = pCaptureClient->lpVtbl->GetBuffer(pCaptureClient, &pData, &numFramesAvailable, &flags, NULL, NULL);
-			EXIT_ON_ERROR(hr)
+        while (packetLength != 0)
+        {
+            // Get the available data in the shared buffer.
+            hr = pCaptureClient->lpVtbl->GetBuffer(pCaptureClient, &pData, &numFramesAvailable, &flags, NULL, NULL);
+            EXIT_ON_ERROR(hr)
 
-			if (flags & AUDCLNT_BUFFERFLAGS_SILENT)
-			{
-				pData = 0;
-			}
+            if (flags & AUDCLNT_BUFFERFLAGS_SILENT)
+            {
+                pData = 0;
+            }
 
-			// Calculate the amplitude for the current buffer
-			//if (pData == NULL) printf("Null data");
-			//else printf("%02x\n", pData);
+            // Calculate the amplitude for the current buffer
+            //if (pData == NULL) printf("Null data");
+            //else printf("%02x\n", pData);
 
-			int amplitude = GetAmplitude(pwfx, pData, &numFramesAvailable);
-			if (amplitude == -1) goto Exit;
+            int amplitude = GetAmplitude(pwfx, pData, &numFramesAvailable);
+            if (amplitude == -1) goto Exit;
 
-			peak = MAX(peak, amplitude);
+            peak = MAX(peak, amplitude);
 
-			hr = pCaptureClient->lpVtbl->ReleaseBuffer(pCaptureClient, numFramesAvailable);
-			EXIT_ON_ERROR(hr)
+            hr = pCaptureClient->lpVtbl->ReleaseBuffer(pCaptureClient, numFramesAvailable);
+            EXIT_ON_ERROR(hr)
 
-			hr = pCaptureClient->lpVtbl->GetNextPacketSize(pCaptureClient, &packetLength);
-			EXIT_ON_ERROR(hr)
-		}
+            hr = pCaptureClient->lpVtbl->GetNextPacketSize(pCaptureClient, &packetLength);
+            EXIT_ON_ERROR(hr)
+        }
 
-		if (peak >= threshold)
-		{
-			//printf("Y\n");
-			input.ki.dwFlags = 0;
-		}
-		else
-		{
-			//printf("N\n");
-			input.ki.dwFlags = KEYEVENTF_KEYUP;
-		}
+        if (peak >= threshold)
+        {
+            //printf("Y\n");
+            input.ki.dwFlags = 0;
+        }
+        else
+        {
+            //printf("N\n");
+            input.ki.dwFlags = KEYEVENTF_KEYUP;
+        }
 
-		// Send input (key down or up depending on peak value).
-		SendInput(1, &input, sizeof(INPUT));
+        // Send input (key down or up depending on peak value).
+        SendInput(1, &input, sizeof(INPUT));
 
-		//bDone = TRUE;
-	}
+        //bDone = TRUE;
+    }
 
-	hr = pAudioClient->lpVtbl->Stop(pAudioClient);  // Stop recording.
-	EXIT_ON_ERROR(hr)
-		
+    hr = pAudioClient->lpVtbl->Stop(pAudioClient);  // Stop recording.
+    EXIT_ON_ERROR(hr)
+        
 Exit:
-	CoTaskMemFree(pwfx);
-	SAFE_RELEASE(pEnumerator)
-	SAFE_RELEASE(pDevice)
-	SAFE_RELEASE(pAudioClient)
-	SAFE_RELEASE(pCaptureClient)
+    CoTaskMemFree(pwfx);
+    SAFE_RELEASE(pEnumerator)
+    SAFE_RELEASE(pDevice)
+    SAFE_RELEASE(pAudioClient)
+    SAFE_RELEASE(pCaptureClient)
 
-	return hr;
+    return hr;
 }
 
 int main(int argc, char *argv[]) {
-	int interval = 50;
-	int threshold = 50;
-	WORD keyCode = VK_SPACE;
+    int interval = 50;
+    int threshold = 50;
+    WORD keyCode = VK_SPACE;
 
-	if (argc > 1)
-	{
-		char *p;
+    if (argc > 1)
+    {
+        char *p;
 
-		long conv = strtol(argv[1], &p, 10);
+        long conv = strtol(argv[1], &p, 10);
 
-		if (*p != '\0' || conv > INT_MAX)
-		{
-			printf("Invalid argument.\n");
-			getchar();
-			return 1;
-		}
+        if (*p != '\0' || conv > INT_MAX)
+        {
+            printf("Invalid argument.\n");
+            getchar();
+            return 1;
+        }
 
-		interval = conv;
-	}
+        interval = conv;
+    }
 
-	if (argc > 2)
-	{
-		char *p;
+    if (argc > 2)
+    {
+        char *p;
 
-		long conv = strtol(argv[2], &p, 10);
+        long conv = strtol(argv[2], &p, 10);
 
-		if (*p != '\0' || conv > INT_MAX)
-		{
-			printf("Invalid argument.\n");
-			getchar();
-			return 1;
-		}
+        if (*p != '\0' || conv > INT_MAX)
+        {
+            printf("Invalid argument.\n");
+            getchar();
+            return 1;
+        }
 
-		threshold = conv;
-	}
+        threshold = conv;
+    }
 
-	printf("Enter the key to bind to the microphone. ");
-	char key = getchar();
+    printf("Enter the key to bind to the microphone. ");
+    char key = getchar();
 
-	HKL keyboardLayout = GetKeyboardLayout(0);
-	SHORT keyCodeShort = VkKeyScanEx(key, keyboardLayout);
-	keyCode = keyCodeShort & 0xff;
+    HKL keyboardLayout = GetKeyboardLayout(0);
+    SHORT keyCodeShort = VkKeyScanEx(key, keyboardLayout);
+    keyCode = keyCodeShort & 0xff;
 
-	printf("Enter a desired threshold value (default: 50). ");
-	scanf_s("%d", &threshold);
+    printf("Enter a desired threshold value (default: 50). ");
+    scanf_s("%d", &threshold);
 
-	printf("Enter a desired interval value (default: 50). ");
-	scanf_s("%d", &interval);
+    printf("Enter a desired interval value (default: 50). ");
+    scanf_s("%d", &interval);
 
-	printf("\n");
+    printf("\n");
 
-	RecordAudioStream(interval, threshold, keyCode);
-	return 0;
+    RecordAudioStream(interval, threshold, keyCode);
+    return 0;
 }
