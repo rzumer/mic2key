@@ -265,11 +265,18 @@ int main(int argc, char *argv[]) {
 
 	printf("Enter the key to bind to the microphone. ");
 	char key = getchar();
-	printf("\n");
 
 	HKL keyboardLayout = GetKeyboardLayout(0);
 	SHORT keyCodeShort = VkKeyScanEx(key, keyboardLayout);
 	keyCode = keyCodeShort & 0xff;
+
+	printf("Enter a desired threshold value (default: 50). ");
+	scanf_s("%d", &threshold);
+
+	printf("Enter a desired interval value (default: 50). ");
+	scanf_s("%d", &interval);
+
+	printf("\n");
 
 	RecordAudioStream(interval, threshold, keyCode);
 	return 0;
